@@ -1,0 +1,17 @@
+<!DOCTYPE html>
+<html>
+<head>
+	<title>Quaver</title>
+	<link rel='stylesheet' href='css/page.css'>
+	<script src='js/quaver.js'></script>
+</head>
+<body>
+	<div id='twitter'></div>
+	<script>
+	quaver.init({ proxy: "http://localhost:4567/[[url]]?debug=true"})
+	var $ = function(id) { return new quaver.util.element(id) };
+	//$("twitter").html(quaver.util.linkify("blah marc@fascinationstreet.co.za @marcheiligers #funny http://www.eternal.co.za @madmimidev marc@madmimi.com www.madmimi.com blah"));
+	quaver.tweets("twitter");
+	</script>
+</body>
+</html>
