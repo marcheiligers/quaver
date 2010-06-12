@@ -7,11 +7,13 @@
 </head>
 <body>
 	<div id='twitter'></div>
+	<div id='go' style='position:absolute;top:50px;left:50px;width:50px;height:50px;background-color:#f00;'></div>
 	<script>
 	quaver.init({ proxy: "http://localhost:4567/[[url]]?debug=true"})
-	var $ = function(id) { return new quaver.util.element(id) };
+	var $ = quaver.util.$;
 	//$("twitter").html(quaver.util.linkify("blah marc@fascinationstreet.co.za @marcheiligers #funny http://www.eternal.co.za @madmimidev marc@madmimi.com www.madmimi.com blah"));
 	quaver.tweets("twitter");
+	$("go").anim({ top: 400, left: 600, opacity: 0.1 });
 	</script>
 </body>
 </html>

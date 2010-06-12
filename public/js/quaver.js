@@ -10,24 +10,22 @@ var quaver = (function() {
   
   
   var init = function(opts) {
-    for(opt in opts) {
-      options[opt] = opts[opt];
-    }
+    extend(options, opts);
   };
   
   // Twitter
   var tweets = function(id) {
     json(options.twitter, function(json) {
-      var s = [], t = readTweets(json);
-      for(var i = 0, l = t.length; i < l; ++i) {
+      var s = [], t = readTweets(json), i, l;
+      for(i = 0, l = t.length; i < l; ++i) {
         s.push(expand(options.tweet, t[i]));
       }
       $(id).html(s.join(""));
     });
   };
   function readTweets(obj) {
-    res = [];
-    for(var i = 0, l = obj.length; i < l; ++i) {
+    var res = [], i, l;
+    for(i = 0, l = obj.length; i < l; ++i) {
       var t = obj[i]
       res.push({ id: t.id, date: options.dateFormat(new Date(t.created_at)), avatar: t.user.profile_image_url, text: linkify(t.text) });
     }
@@ -43,13 +41,31 @@ var quaver = (function() {
   }
   
   function $(id) {
-    return new element(id);
+    return id.__quaver_element ? id : new element(id);
   }
   
   function bind(fn, scope) {
     return function() {
       return fn.apply(scope, arguments);
     }
+  }
+  
+  function curry(fn, args, scope) {
+    return function() {
+      return fn.apply(scope || this, args.concat(array(arguments)));
+    }
+  }
+  
+  function extend(obj, ext) {
+    if(ext == null) return obj;
+    for(var prop in ext) obj[prop] = ext[prop];
+    return obj;
+  }
+  
+  function array(i) {
+    var l = i.length, a = [];
+    while(l--) a[l] = i[l];
+    return a;
   }
   
   // started with http://snippets.dzone.com/posts/show/6995 and built on for twitter and emails
@@ -108,13 +124,35 @@ var quaver = (function() {
     this.el = el;
   }
   element.prototype = {
+    __quaver_element: true,
     html: function(content) {
       this.el.innerHTML = content;
     },
     // based roughly on http://www.quirksmode.org/js/opacity.html but I like 0..1 ranges
+    // made it a reader/writer
+    opacityRegex: /alpha\(opacity=(\d)\)/gi,
     opacity: function(value) {
-    	this.el.style.opacity = value;
-    	this.el.style.filter = 'alpha(opacity=' + value * 100 + ')';
+      if(value == null) {
+        var matches = this.el.style.filter ? this.el.style.filter.match(this.opacityRegex) : null;
+        if(matches && matches.length > 0) return parseInt(matches[0]) / 100.0;
+        return this.el.style.opacity || 1.0;
+    	} else {
+      	this.el.style.opacity = value;
+      	this.el.style.filter = 'alpha(opacity=' + Math.round(value * 100) + ')';
+      	return this; // for chaining
+    	}
+    },
+    style: function(style, value) {
+      if(style == "opacity") return this.opacity(value);
+      if(value == null) {
+        return this.el.style[style];
+      } else {
+        this.el.style[style] = value;
+        return this;
+      }
+    },
+    anim: function(styles, options) {
+      return new anim(this, styles, options);
     }
   };
   
@@ -144,5 +182,47 @@ var quaver = (function() {
   	}
 	};
 	
-	return { init: init, tweets: tweets, util: { ajax: ajax, linkify: linkify, element: element } };
+	// This is far from the worlds most advanced animation class, but it works for my purposes
+	// element is an element or an element id, styles is a hash of ending styles
+	var anim = function(element, styles, options) {
+	  this.el = $(element);
+	  var opts = extend({ duration: 2 }, options);
+	  this.duration = opts.duration * 1000.0;
+	  this.run(styles);
+	};
+	anim.prototype = {
+	  run: function(styles) {
+	    this.styles = [];
+	    for(s in styles) {
+	      if(",top,left,bottom,right".indexOf(s)) this.styles.push({ fn: curry(this.px, [ s ], this), s: parseInt(this.px(s)), e: parseInt(styles[s]) });
+	      if(",opacity".indexOf(s)) this.styles.push({ fn: curry(this.num, [ s ], this), s: parseFloat(this.num(s)), e: parseFloat(styles[s]) });
+	    }
+	    this.start = new Date().getTime();
+	    this.inter = setInterval(bind(this.update, this), 1);
+	  },
+	  update: function() {
+	    var n = new Date().getTime(), d = Math.min((n - this.start) / this.duration, 1), p = this.spring(d), s = this.styles, x, y;
+	    if(d == 1) clearInterval(this.inter);
+	    for(x in s) {
+	      y = s[x];
+	      y.fn(y.s + (y.e - y.s) * p);
+	    }
+	  },
+    // Thanks, Mr Fuchs. http://github.com/madrobby/scripty2/blob/master/src/effects/transitions/transitions.js
+	  sinusoidal: function(pos) {
+      return (-Math.cos(pos*Math.PI)/2) + 0.5;
+    },
+    spring: function(pos) {
+      return 1 - (Math.cos(pos * 4.5 * Math.PI) * Math.exp(-pos * 6));
+    },
+    // methods for getting and setting styles based on the units
+    num: function(style, value) {
+      return this.el.style(style, value);
+    },
+    px: function(style, value) {
+      return this.el.style(style, value == null ? null : value + "px");
+    }
+  }
+	
+	return { init: init, tweets: tweets, util: { $: $, ajax: ajax, linkify: linkify, element: element } };
 })();
