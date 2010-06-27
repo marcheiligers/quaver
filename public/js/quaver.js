@@ -81,16 +81,20 @@ var quaver = (function() {
       if(!v.match(linkifyProtocol)) {
         url = "http://" + v;
       }
-      return "<a href='" + url + "'>" + url + "</a>";
+      return "<a href='" + url + "' title='" + url + "'>" + shorten(url) + "</a>";
     }).replace(linkifyEmails, function(v) {
-      return "<a href='mailto:" + v + "'>" + v + "</a>";
+      return "<a href='mailto:" + v + "' title='Email " + v + "'>" + shorten(v) + "</a>";
     }).replace(linkifyTweeters, function(v) {
       var s = v[0] == "@" ? "" : v[0], u = v[0] == "@" ? v : v.substr(1);
-      return s + "<a href='http://twitter.com/" + u + "'>" + u + "</a>";
+      return s + "<a href='http://twitter.com/" + u + "' title='Twitter user " + u + "'>" + shorten(u) + "</a>";
     }).replace(linkifyHashtags, function(v) {
       var s = v[0] == "#" ? "" : v[0], h = v[0] == "#" ? v : v.substr(1);
-      return s + "<a href='http://twitter.com/search?q=" + h + "'>" + h + "</a>";
+      return s + "<a href='http://twitter.com/search?q=" + h + "' title='Search Twitter for #" + h + "'>" + shorten(h) + "</a>";
     });
+  }
+  function shorten(text) {
+    if(text.length <= 20) return text;
+    return text.substr(0, 9) + '&hellip;' + text.substr(text.length - 10);
   }
   
   var expandRegex = /(\[\[\w*\]\])/g
